@@ -1,0 +1,42 @@
+document.addEventListener('DOMContentLoaded', () => {
+  const token = localStorage.getItem('token');
+  const userStr = localStorage.getItem('user');
+
+  // Authentication Check
+  if (!token || !userStr) {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  const user = JSON.parse(userStr);
+
+  // Update UI with user info
+  const welcomeMessage = document.getElementById('welcome-message');
+  const navUsername = document.getElementById('nav-username');
+  
+  if (welcomeMessage) {
+    welcomeMessage.textContent = `Welcome back, ${user.name}!`;
+  }
+  
+  if (navUsername) {
+    navUsername.textContent = user.name;
+  }
+
+  // Role-based UI rendering
+  if (user.role === 'admin') {
+    const adminLink = document.getElementById('nav-admin');
+    if (adminLink) {
+      adminLink.classList.remove('hidden-role');
+    }
+  }
+
+  // Logout Functionality
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = 'index.html';
+    });
+  }
+});

@@ -1,0 +1,126 @@
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Elements
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const showRegisterLink = document.getElementById('show-register');
+  const showLoginLink = document.getElementById('show-login');
+  const authSubtitle = document.getElementById('auth-subtitle');
+  const messageContainer = document.getElementById('message-container');
+
+  // Toggle Forms
+  showRegisterLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginForm.style.display = 'none';
+    loginForm.classList.remove('animate-enter');
+    
+    registerForm.style.display = 'block';
+    registerForm.classList.add('animate-enter');
+    
+    authSubtitle.textContent = 'Create an account to join the community.';
+    hideMessage();
+  });
+
+  showLoginLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    registerForm.style.display = 'none';
+    registerForm.classList.remove('animate-enter');
+    
+    loginForm.style.display = 'block';
+    loginForm.classList.add('animate-enter');
+    
+    authSubtitle.textContent = 'Welcome back! Please login to your account.';
+    hideMessage();
+  });
+
+  // Display Message utility
+  const showMessage = (msg, type) => {
+    messageContainer.textContent = msg;
+    messageContainer.className = `message ${type}`;
+  };
+
+  const hideMessage = () => {
+    messageContainer.className = 'message';
+    messageContainer.style.display = 'none';
+  };
+
+  // Login Submit
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    const btn = document.getElementById('login-btn');
+
+    try {
+      btn.disabled = true;
+      btn.textContent = 'Signing In...';
+      
+      const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage('Login successful! Redirecting...', 'success');
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        setTimeout(() => {
+          window.location.href = 'home.html';
+        }, 1500);
+      } else {
+        showMessage(data.message || 'Login failed.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showMessage('Network error. Is the server running?', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+  });
+
+  // Register Submit
+  registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('reg-name').value;
+    const email = document.getElementById('reg-email').value;
+    const password = document.getElementById('reg-password').value;
+    const btn = document.getElementById('register-btn');
+
+    try {
+      btn.disabled = true;
+      btn.textContent = 'Creating Account...';
+
+      const response = await fetch(`${API_URL}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage('Registration successful! Redirecting...', 'success');
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        setTimeout(() => {
+          window.location.href = 'home.html';
+        }, 1500);
+      } else {
+        showMessage(data.message || 'Registration failed.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showMessage('Network error. Is the server running?', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+    }
+  });
+});

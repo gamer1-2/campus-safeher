@@ -1,0 +1,83 @@
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  const token = localStorage.getItem('token');
+  const userStr = localStorage.getItem('user');
+
+  // Authentication Check
+  if (!token || !userStr) {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  const user = JSON.parse(userStr);
+
+  // Role-based UI for Admin link
+  if (user.role === 'admin') {
+    const adminLink = document.getElementById('nav-admin');
+    if (adminLink) adminLink.classList.remove('hidden-role');
+  }
+
+  // Logout
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = 'index.html';
+    });
+  }
+
+  // Emergency Form Logic
+  const emergencyForm = document.getElementById('emergency-form');
+  const messageContainer = document.getElementById('message-container');
+  const submitBtn = document.getElementById('submit-btn');
+
+  const showMessage = (msg, type) => {
+    messageContainer.textContent = msg;
+    messageContainer.className = `message ${type}`;
+    // Scroll to message
+    messageContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  emergencyForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const type = document.getElementById('emergency-type').value;
+    const description = document.getElementById('emergency-description').value;
+
+    if (!type || !description.trim()) {
+      showMessage('Please fill in all fields.', 'error');
+      return;
+    }
+
+    try {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting Request...';
+
+      const response = await fetch(`${API_URL}/emergency`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ type, description })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage('Emergency request submitted successfully. Help is on the way.', 'success');
+        emergencyForm.reset();
+      } else {
+        showMessage(data.message || 'Failed to submit request.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showMessage('Network error. Could not connect to server.', 'error');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit Request';
+    }
+  });
+});

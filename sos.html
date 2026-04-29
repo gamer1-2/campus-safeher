@@ -1,0 +1,149 @@
+document.addEventListener('DOMContentLoaded', () => {
+  const token = localStorage.getItem('token');
+  const userStr = localStorage.getItem('user');
+
+  // Authentication Check
+  if (!token || !userStr) {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  const user = JSON.parse(userStr);
+
+  // Set User Info
+  document.getElementById('user-name').textContent = user.name || 'User';
+  document.getElementById('user-email').textContent = user.email || 'No email provided';
+  document.getElementById('user-role').textContent = user.role === 'admin' ? 'Administrator' : 'Student';
+
+  // Role-based UI for Admin link
+  if (user.role === 'admin') {
+    const adminLink = document.getElementById('nav-admin');
+    if (adminLink) adminLink.classList.remove('hidden-role');
+  }
+
+  // Logout
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = 'index.html';
+    });
+  }
+
+  // Tab Switching Logic
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabContents = document.querySelectorAll('.tab-content');
+
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Remove active class from all
+      tabBtns.forEach(b => b.classList.remove('active'));
+      tabContents.forEach(c => c.classList.remove('active'));
+
+      // Add active class to clicked
+      btn.classList.add('active');
+      const target = document.getElementById(btn.dataset.target);
+      target.classList.add('active');
+    });
+  });
+
+  // Fetch History Data
+  fetchHistoryData(token);
+});
+
+
+
+async function fetchHistoryData(token) {
+  try {
+    const response = await fetch(`${API_URL}/history`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      renderEmergencies(data.emergencies, data.sosAlerts);
+      renderReports(data.reports);
+    } else {
+      console.error("Failed to fetch history");
+      showError('emergencies-list');
+      showError('reports-list');
+    }
+  } catch (err) {
+    console.error(err);
+    showError('emergencies-list');
+    showError('reports-list');
+  }
+}
+
+function renderEmergencies(emergencies, sosAlerts) {
+  const container = document.getElementById('emergencies-list');
+  container.innerHTML = '';
+
+  // Combine and sort by date descending
+  const combined = [
+    ...emergencies.map(e => ({ ...e, type: 'emergency' })),
+    ...sosAlerts.map(s => ({ ...s, type: 'sos' }))
+  ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  if (combined.length === 0) {
+    container.innerHTML = `<div class="empty-state">No past emergencies or SOS alerts found.</div>`;
+    return;
+  }
+
+  combined.forEach(item => {
+    const date = new Date(item.createdAt).toLocaleDateString(undefined, {
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
+    const isSOS = item.type === 'sos';
+    const icon = isSOS ? 'bell' : 'truck-medical';
+    const title = isSOS ? 'SOS Alert Triggered' : `${item.type.toUpperCase()} Emergency`;
+    const desc = isSOS ? `Location: Lat ${item.latitude.toFixed(4)}, Lng ${item.longitude.toFixed(4)}` : item.description;
+
+    const html = `
+      <div class="history-item ${isSOS ? 'sos' : 'emergency'}">
+        <div class="history-item-header">
+          <div class="history-item-title"><i class="fa-solid fa-${icon}"></i> ${title}</div>
+          <div class="history-item-date">${date}</div>
+        </div>
+        <div class="history-item-desc">${desc}</div>
+      </div>
+    `;
+    container.innerHTML += html;
+  });
+}
+
+function renderReports(reports) {
+  const container = document.getElementById('reports-list');
+  container.innerHTML = '';
+
+  if (reports.length === 0) {
+    container.innerHTML = `<div class="empty-state">No incident reports found.</div>`;
+    return;
+  }
+
+  reports.forEach(report => {
+    const date = new Date(report.createdAt).toLocaleDateString(undefined, {
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
+    const html = `
+      <div class="history-item" style="border-left-color: #38bdf8;">
+        <div class="history-item-header">
+          <div class="history-item-title"><i class="fa-solid fa-file-lines"></i> ${report.title}</div>
+          <div class="history-item-date">${date}</div>
+        </div>
+        <div class="history-item-desc" style="margin-bottom: 0.5rem;"><strong>Location:</strong> ${report.location}</div>
+        <div class="history-item-desc">${report.description}</div>
+      </div>
+    `;
+    container.innerHTML += html;
+  });
+}
+
+function showError(containerId) {
+  document.getElementById(containerId).innerHTML = `<div class="empty-state" style="color: #ef4444;">Failed to load data.</div>`;
+}

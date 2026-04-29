@@ -1,0 +1,12 @@
+// config.js
+// This file automatically points the frontend to the correct backend depending on where it's running.
+
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+const API_URL = isLocalhost 
+  ? 'http://localhost:5000/api' 
+  : 'https://campus-safeher-backend.onrender.com/api';
+
+const SOCKET_URL = isLocalhost
+  ? 'http://localhost:5000'
+  : 'https://campus-safeher-backend.onrender.com';

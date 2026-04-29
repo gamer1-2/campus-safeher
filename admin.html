@@ -1,0 +1,27 @@
+const express = require('express');
+const router = express.Router();
+const authMiddleware = require('../middleware/authMiddleware');
+const adminMiddleware = require('../middleware/adminMiddleware');
+const { 
+  getAllSOS, 
+  getAllEmergencies, 
+  getAllReports, 
+  resolveEmergency, 
+  deleteReport,
+  getLiveLocations
+} = require('../controllers/adminController');
+
+// All routes require auth and admin privileges
+router.use(authMiddleware, adminMiddleware);
+
+// GET routes
+router.get('/sos', getAllSOS);
+router.get('/live-locations', getLiveLocations);
+router.get('/emergency', getAllEmergencies);
+router.get('/reports', getAllReports);
+
+// Action routes
+router.patch('/emergency/:id/resolve', resolveEmergency);
+router.delete('/report/:id', deleteReport);
+
+module.exports = router;

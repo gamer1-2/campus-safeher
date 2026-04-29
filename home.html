@@ -1,0 +1,115 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+require('dotenv').config();
+
+const authRoutes = require('./routes/authRoutes');
+const apiRoutes = require('./routes/apiRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+
+const User = require('./models/User');
+const SOSAlert = require('./models/SOSAlert');
+const EmergencyRequest = require('./models/EmergencyRequest');
+const IncidentReport = require('./models/IncidentReport');
+const bcrypt = require('bcryptjs');
+
+const http = require('http');
+const { Server } = require('socket.io');
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST", "PATCH", "DELETE"]
+  }
+});
+
+// Make io accessible in controllers
+app.set('io', io);
+
+io.on('connection', (socket) => {
+  console.log('New client connected:', socket.id);
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
+
+// Middleware
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN || '*',
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json());
+
+// Health check for Render
+app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
+
+// Routes
+app.use('/api', authRoutes);
+app.use('/api', apiRoutes);
+app.use('/api/admin', adminRoutes);
+
+// Database Connection
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('MongoDB Connected to standard URI');
+  } catch (err) {
+    console.warn('Standard MongoDB connection failed, starting In-Memory MongoDB fallback...');
+    const { MongoMemoryServer } = require('mongodb-memory-server');
+    const mongoServer = await MongoMemoryServer.create();
+    const uri = mongoServer.getUri();
+    await mongoose.connect(uri);
+    console.log(`In-memory MongoDB Connected at ${uri}`);
+  }
+};
+
+const seedDatabase = async () => {
+  try {
+    const userCount = await User.countDocuments();
+    if (userCount > 0) return; // Only seed if empty
+
+    console.log('Seeding demo data...');
+    
+    // Seed Users
+    const password = await bcrypt.hash('password123', 10);
+    const priya = await User.create({ name: 'Priya Sharma', email: 'priya@example.com', password, role: 'user' });
+    const anjali = await User.create({ name: 'Anjali Verma', email: 'anjali@example.com', password, role: 'user' });
+    const riya = await User.create({ name: 'Riya Singh', email: 'riya@example.com', password, role: 'user' });
+
+    // Seed SOS
+    // Approximate location for Hostel Block A (using the center of map 20.5937, 78.9629 + slight offset)
+    await SOSAlert.create({ userId: priya._id, latitude: 20.5940, longitude: 78.9630, status: 'active' });
+
+    // Seed Emergency
+    await EmergencyRequest.create({ 
+      userId: anjali._id, 
+      type: 'medical', 
+      description: 'Feeling unconscious near library', 
+      status: 'pending' 
+    });
+
+    // Seed Report
+    await IncidentReport.create({ 
+      userId: riya._id, 
+      title: 'Poor Lighting', 
+      description: 'Poor lighting near parking area, making it feel unsafe at night.', 
+      location: 'Parking Area', 
+      status: 'pending' 
+    });
+
+    console.log('Demo data seeded successfully!');
+  } catch (err) {
+    console.error('Failed to seed demo data:', err);
+  }
+};
+
+connectDB().then(async () => {
+  await seedDatabase();
+  const PORT = process.env.PORT || 5000;
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+});

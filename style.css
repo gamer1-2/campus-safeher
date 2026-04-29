@@ -1,0 +1,23 @@
+const express = require('express');
+const router = express.Router();
+const authMiddleware = require('../middleware/authMiddleware');
+const { triggerSOS, requestEmergency, reportIncident, updateLiveLocation, getUnsafeZones, getUserHistory } = require('../controllers/apiController');
+
+// SOS Route
+router.post('/sos', authMiddleware, triggerSOS);
+
+// Emergency Request Route
+router.post('/emergency', authMiddleware, requestEmergency);
+
+// Incident Report Route
+router.post('/report', authMiddleware, reportIncident);
+
+// Live Location Route
+router.post('/live-location', authMiddleware, updateLiveLocation);
+// Unsafe Zones Route
+router.get('/unsafe-zones', authMiddleware, getUnsafeZones);
+
+// User History Route
+router.get('/history', authMiddleware, getUserHistory);
+
+module.exports = router;
